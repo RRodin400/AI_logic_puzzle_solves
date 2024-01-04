@@ -1,0 +1,168 @@
+% Collaborators 
+%%%%%
+%%%%% NAME: Dishu Bansal
+%%%%% NAME: Gurveen Kaur
+%%%%% NAME: Rachelle Rodin
+%
+
+%Hints about the network encoded in prolog
+address(bananas). address(firstbank). address(netvue). address(pricenet). address(sysworld). address(univmoose).
+man(anthony). man(daniel). man(jaime). women(catarina). women(lizzie). women(mona).
+lastname(elby). lastname(kim). lastname(osborne). lastname(tsuji). lastname(wolverton). lastname(zickerman).
+nextto(6, 5). nextto(5, 3). nextto(3, 2). nextto(2, 1). nextto(1, rest). nextto(3, 4).
+nextto(5, 6). nextto(3, 5). nextto(2, 3). nextto(1, 2). nextto(rest, 1). nextto(4, 3).
+sys(1). sys(2). sys(3). sys(4). sys(5). sys(6). 
+
+%%%%% SECTION: networkSolve
+%% auxillary functions:
+getNumber([N, _, _, _], N).
+getSystem([_, S, _, _], S).
+getFirstName([_, _, AF, _], AF). 
+getLastName([_, _, _, AL], AL).
+
+findPair(rest, _, [rest, none, none, none]).
+findPair(X1, [H|_], Pair):- getNumber(H, X2), X2 = X1, Pair = H.
+findPair(X1, [_|T], Pair):- findPair(X1, T, Pair).
+
+findPair2(rest, _, [rest, none, none, none]).
+findPair2(X1, [H|_], Pair):- mem(X1, H), Pair = H.
+findPair2(X1, [_|T], Pair):- findPair2(X1, T, Pair).
+
+findPairByLastName(X1, [H|_], Pair):- getLastName(H, X2), X2 = X1, Pair = H.
+findPairByLastName(X1, [_|T], Pair):- findPairByLastName(X1, T, Pair).
+
+findPairByFirstName(X1, [H|_], Pair):- getFirstName(H, X2), X2 = X1, Pair = H.
+findPairByFirstName(X1, [_|T], Pair):- findPairByFirstName(X1, T, Pair).
+
+findPairBySystem(X1, [H|_], Pair):- getSystem(H, X2), X2 = X1, Pair = H.
+findPairBySystem(X1, [_|T], Pair):- findPairBySystem(X1, T, Pair).
+
+findPairByNumber(X1, [H|_], Pair):- getNumber(H, X2), X2 = X1, Pair = H.
+findPairByNumber(X1, [_|T], Pair):- findPairByNumber(X1, T, Pair).
+
+filterPairs([], _, []).
+filterPairs([H1|T1], Pairs, Final):- findPair(H1, Pairs, Pair), filterPairs(T1, Pairs, A1), appen(A1, [Pair], Final).
+
+getListOfLastNames([], []).
+getListOfLastNames([H | T], LastList):- getLastName(H, X), getListOfLastNames(T, I), appen(I, [X], LastList).
+
+getListOfSystems([], []).
+getListOfSystems([H | T], SystemList):- getSystem(H, X), getListOfSystems(T, I), appen(I, [X], SystemList).
+
+passThrough(X, Origin, Destination):- trip(Origin, Destination, P), mem(X, P), not X = Origin, not X = Destination.
+
+mem(H, [H|T]).
+mem(H, [H1|T1]):- mem(H, T1).
+
+%%%%% trip (a key auxillary function)
+%%%%% The predicate "trip" takes in two computer systems and returns the list of locations in between them.
+%%%%% The signature of this predicate is trip(From,To,Path)
+appen([],List2,List2).
+appen([Head1 | Tail1],List2,[Head1 | BigList]) :- appen(Tail1,List2,BigList).
+allDiff([]).
+allDiff([H|T]):- not mem(H, T), allDiff(T).
+trip(From, From, Path, Temp):- Path = Temp.
+trip(From, To, Path, Temp):- nextto(From, X), appen(Temp, [X], A), allDiff(A), trip(X, To, Path, A).
+trip(From, To, Path):- trip(From, To, Path, [From]).
+
+
+
+%%Solve
+%% The predicate "solve" takes in the list of
+%%%%% variables and finds an assignment for each variable which solves the problem.
+
+solve([[N1, S1, anthony, AL1], [N2, S2, daniel, AL2], [N3, S3, jaime, AL3], [N4, S4, catarina, AL4], [N5, S5, lizzie, AL5], [N6, S6, mona, AL6]]):-
+
+    ListofPairs = [[N1, S1, anthony, AL1], [N2, S2, daniel, AL2], [N3, S3, jaime, AL3], [N4, S4, catarina, AL4], [N5, S5, lizzie, AL5], [N6, S6, mona, AL6]],
+
+    lastname(AL1), 
+    lastname(AL2), not AL1 = AL2, 
+    lastname(AL3), not mem(AL3, [AL1, AL2]), 
+    lastname(AL4), not mem(AL4, [AL1, AL2, AL3]), 
+    lastname(AL5), not mem(AL5, [AL1, AL2, AL3, AL4]), 
+    lastname(AL6),
+
+    % Constraint 5 mentions Tsuji as 'Ms', telling us that tsuji is a woman.
+    % Reason:- Saves us iterations later on, by specifying in advance tsuji is a woman
+    %mem(tsuji, [AL4, AL5, AL6]),
+    allDiff([AL1, AL2, AL3, AL4, AL5, AL6]),
+    
+    sys(N1), 
+    sys(N2), not N2 = N1,
+
+    % Constraint 4 - Part 1/2
+    % Reason- N2 will get a fixed number and will save iteration later on.
+    nextto(N2, NextSystem), not (nextto(N2, System1), sys(System1), not NextSystem = System1), 
+     
+    sys(N3), not mem(N3, [N1, N2]), 
+    sys(N4), not mem(N4, [N1, N2, N3]), 
+    sys(N5), not mem(N5, [N1, N2, N3, N4]), 
+    sys(N6),
+    allDiff([N1, N2, N3, N4, N5, N6]),
+    
+    % Constraint 2 - Part 1/2
+    % Reason - Satisfies the Wolverton is next to mona. Saves time because it will save iterations in system numbers
+    findPairByLastName(wolverton, ListofPairs, P0), getNumber(P0, Num6), nextto(N6, Num6), 
+
+    % constraint 3
+    % Reason - System names are not used in this contraint, so we can use it before we declare them.
+    passThrough(X5, N1, N3), findPairByNumber(X5, ListofPairs, Re), mem(elby, Re),
+
+    % Constraint 8 - Part 1/2
+    % Reason - We can divide the constraint 8. First part doesnt require system names and helps to save iteration on system numbers.
+    findPairByLastName(zickerman, ListofPairs, FP7), getNumber(FP7, Sys4), nextto(Sys4, X3), nextto(Sys4, X4), not X3 = X4, not (nextto(Sys4, Y), not X3=Y, not X4=Y), mem(N4, [X3, X4]), 
+
+    % Constraint 5 - Part 1/2
+    % Reason - We can divide the constraint 5. First part doesnt require system names and helps to save iteration on system numbers.
+    findPairByLastName(tsuji, [[N4, S4, catarina, AL4], [N5, S5, lizzie, AL5], [N6, S6, mona, AL6]], FP5), getNumber(FP5, Num3), passThrough(X7, N3, Num3), 
+
+    % Constraint 1 - Part 1/2
+    % Reason - We can divide the constraint 1. First part doesnt require system names and helps to save iteration on system numbers.
+    findPairByLastName(osborne, ListofPairs, Pai2), getNumber(Pai2, Num5), passThrough(X8, N5, Num5), 
+    
+    address(S1), address(S2), not S1 = S2, address(S3), not mem(S3, [S1, S2]), 
+    
+    % Constraint 6
+    not mem(bananas, [S1, S2, S3]), 
+    
+    address(S4), 
+    not mem(S4, [S1, S2, S3]), 
+    address(S5),  
+    not mem(S5, [S1, S2, S3, S4]), address(S6),
+    allDiff([S1, S2, S3, S4, S5, S6]),
+    
+    % Constraint 4 - Part 2/2
+    % Reason - We can divide the constraint 4. First part finalized the system number, Now we only need to match it with system name.
+    findPairByNumber(NextSystem, ListofPairs, [NextSystem, sysworld, _, _]),
+
+    % constraint 8 - Part 2/2
+    % Reason - We can divide the constraint 8. First part finalized the system number, Now we only need to match it with system name.
+    filterPairs([X3, X4], ListofPairs, FP8), getListOfSystems(FP8, Sys5), mem(netvue, Sys5),
+
+    % contraint 2 - Part 2/2
+    % Reason - We can divide the constraint 2. First part finalized the system number, Now we only need to match it with system name.
+    getSystem(P0, System), mem(netvue, [System, S6]),  
+
+    % constraint 7
+    findPairByLastName(kim, ListofPairs, FP2), getNumber(FP2, Num1), passThrough(X6, Num1, rest), findPairByNumber(X6, ListofPairs, Re2), mem(firstbank, Re2),
+
+    % constraint 5
+    findPairByNumber(X7, ListofPairs, Re3), mem(univmoose, Re3),
+
+    % contraint 1 - Part 2/2
+    findPairByNumber(X8, ListofPairs, [_, pricenet, _, _]).
+
+
+%% The below predicate calls the solve predicate and prints out the results in an easy to read, human readable format. It takes no arguments. 
+
+solve_and_print :-
+  solve(All),
+  print_proper_pairings(All, 1).
+
+print_proper_pairings([], _).
+print_proper_pairings([[N, S, Name, AL] | Rest], PairNumber) :-
+  write("Pair "), write(PairNumber), write(" is ["),
+  write(N), write(","), write(S), write(","), write(Name), write(","), write(AL), write("]"), nl,
+  NewPairNumber is PairNumber + 1,
+  print_proper_pairings(Rest, NewPairNumber).
+
